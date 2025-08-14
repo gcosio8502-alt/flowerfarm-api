@@ -2,27 +2,33 @@
 import Stripe from "stripe";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Orígenes permitidos: pon aquí los dominios que harán la llamada
+// Dominios permitidos
 const ALLOWED_ORIGINS = new Set([
-  "https://flowerfar8135.builtwithrocket.new",          // preview en ventana nueva
-  "https://www.rocket.new",                             // editor de Rocket
-  "https://rocket.new",                                 // por si carga sin www
-  "https://flower-farm-landing-3zryd12.public.builtwithrocket.new", // TU sitio público
-  "http://localhost:3000"                               // opcional
+  "https://flowerfar8135.builtwithrocket.new",                         // Rocket preview (new window)
+  "https://www.rocket.new",                                            // Rocket editor
+  "https://rocket.new",                                                // editor sin www
+  "https://flower-farm-landing-3zryd12.public.builtwithrocket.new",    // TU sitio público (exacto)
+  "http://localhost:3000",                                             // local dev (opcional)
 ]);
 
-
 export default async function handler(req, res) {
-  const origin = req.headers.origin || "";
-  const allowOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "*";
+  // Detecta origin (soporta Node y Web API headers)
+  const origin = req.headers.origin || req.headers.get?.("origin") || "";
 
-  // Encabezados CORS (siempre)
-  res.setHeader("Access-Control-Allow-Origin", allowOrigin);
-  res.setHeader("Vary", "Origin");
+  // Rechaza orígenes no permitidos (NO usar "*")
+  if (!origin || !ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader("Vary", "Origin");
+    if (req.method === "OPTIONS") return res.status(204).end(); // preflight sin ruido
+    return res.status(403).json({ error: "Origin not allowed", origin });
+  }
+
+  // CORS para orígenes válidos
+  res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Vary", "Origin");
 
-  // Preflight
+  // Respuesta al preflight
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
@@ -32,7 +38,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { amount, currency = "usd", metadata = {} } = req.body || {};
+    // En Vercel puede llegar string; parsea si hace falta
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
+    const { amount, currency = "usd", metadata = {} } = body;
+
     if (!amount || Number.isNaN(Number(amount))) {
       return res.status(400).json({ error: "Missing or invalid `amount` (cents)" });
     }
@@ -46,7 +55,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ clientSecret: pi.client_secret });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Server error creating PaymentIntent" });
+    console.error("create-payment-intent error:", err);
+    return res.status(500).json({ error: "Server error creating PaymentIntent", message: err.message });
   }
 }
