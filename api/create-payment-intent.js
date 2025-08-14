@@ -4,9 +4,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Orígenes permitidos: pon aquí los dominios que harán la llamada
 const ALLOWED_ORIGINS = new Set([
-  "https://flowerfar8135.builtwithrocket.new", // tu web en Rocket
-  "http://localhost:3000",                      // opcional para pruebas locales
+  "https://flowerfar8135.builtwithrocket.new", // tu web en Rocket (cuando abres en ventana nueva)
+  "https://www.rocket.new",                    // preview dentro del editor de Rocket
+  "https://rocket.new",                        // por si el preview usa el dominio sin www
+  "http://localhost:3000"                      // opcional para pruebas locales
 ]);
+
 
 export default async function handler(req, res) {
   const origin = req.headers.origin || "";
