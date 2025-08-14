@@ -1,24 +1,21 @@
-// /api/create-payment-intent.js
 import Stripe from "stripe";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Dominios permitidos
 const ALLOWED_ORIGINS = new Set([
-  "https://flowerfar8135.builtwithrocket.new",                         // Rocket preview (new window)
-  "https://www.rocket.new",                                            // Rocket editor
-  "https://rocket.new",                                                // editor sin www
-  "https://flower-farm-landing-3zryd12.public.builtwithrocket.new",    // TU sitio público (exacto)
-  "http://localhost:3000",                                             // local dev (opcional)
+  "https://flowerfar8135.builtwithrocket.new",                         // si lo usas
+  "https://www.rocket.new",
+  "https://rocket.new",
+  "https://flower-farm-landing-3zryd12.public.builtwithrocket.new",
+  "http://localhost:3000",
 ]);
 
 export default async function handler(req, res) {
-  // Detecta origin (soporta Node y Web API headers)
   const origin = req.headers.origin || req.headers.get?.("origin") || "";
 
-  // Rechaza orígenes no permitidos (NO usar "*")
+  // Si el origin NO está permitido, no devolvemos CORS para que el navegador lo bloquee
   if (!origin || !ALLOWED_ORIGINS.has(origin)) {
     res.setHeader("Vary", "Origin");
-    if (req.method === "OPTIONS") return res.status(204).end(); // preflight sin ruido
+    if (req.method === "OPTIONS") return res.status(204).end();
     return res.status(403).json({ error: "Origin not allowed", origin });
   }
 
@@ -28,7 +25,6 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Vary", "Origin");
 
-  // Respuesta al preflight
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
@@ -38,7 +34,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // En Vercel puede llegar string; parsea si hace falta
     const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
     const { amount, currency = "usd", metadata = {} } = body;
 
