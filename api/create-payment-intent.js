@@ -1,33 +1,22 @@
+// api/create-payment-intent.js
 import Stripe from "stripe";
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Dominios que SÍ pueden llamar a este endpoint
-const ALLOWED_ORIGINS = new Set([
-  "https://flower-farm-landing-3zryd12.public.builtwithrocket.new", // dominio público correcto
-  "https://www.rocket.new",
-  "https://rocket.new",
-  "http://localhost:3000",
-]);
+// ⚠️ Usa EXACTAMENTE tu dominio público (sin slash final)
+const PUBLIC_ORIGIN = "https://flower-farm-landing-3zryd12.public.builtwithrocket.new";
 
 export default async function handler(req, res) {
-  const origin = req.headers.origin || "";
-
-  // Si el origin no está en la lista, no exponemos CORS (el navegador lo bloqueará)
-  if (!ALLOWED_ORIGINS.has(origin)) {
-    res.setHeader("Vary", "Origin");
-    if (req.method === "OPTIONS") return res.status(204).end();
-    return res.status(403).json({ error: "Origin not allowed", origin });
-  }
-
-  // CORS para orígenes válidos
-  res.setHeader("Access-Control-Allow-Origin", origin);
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  // CORS SIEMPRE
+  res.setHeader("Access-Control-Allow-Origin", PUBLIC_ORIGIN);
   res.setHeader("Vary", "Origin");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Max-Age", "86400"); // cache preflight
 
-  // Preflight OK
+  // Preflight
   if (req.method === "OPTIONS") {
-    return res.status(200).end();
+    return res.status(204).end();
   }
 
   if (req.method !== "POST") {
@@ -35,9 +24,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
-    const { amount, currency = "usd", metadata = {} } = body;
-
+    const { amount, currency = "usd", metadata = {} } = req.body || {};
     if (!amount || Number.isNaN(Number(amount))) {
       return res.status(400).json({ error: "Missing or invalid `amount` (cents)" });
     }
@@ -46,12 +33,12 @@ export default async function handler(req, res) {
       amount: Math.round(Number(amount)),
       currency,
       automatic_payment_methods: { enabled: true },
-      metadata,
+      metadata
     });
 
     return res.status(200).json({ clientSecret: pi.client_secret });
   } catch (err) {
-    console.error("create-payment-intent error:", err);
-    return res.status(500).json({ error: "Server error creating PaymentIntent", message: err.message });
+    console.error("Stripe error:", err);
+    return res.status(500).json({ error: "Server error creating PaymentIntent" });
   }
 }
