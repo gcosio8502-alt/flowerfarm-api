@@ -1,3 +1,14 @@
+// Add CORS headers
+res.setHeader('Access-Control-Allow-Origin', 'https://flower-farm-landing-3zygd12.public.builtwithrocker.new');
+res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+// Handle preflight requests
+if (req.method === 'OPTIONS') {
+  res.status(200).end();
+  return;
+}
+
 import Stripe from "stripe";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
