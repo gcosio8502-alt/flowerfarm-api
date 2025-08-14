@@ -1,30 +1,19 @@
-// Add CORS headers
-res.setHeader('Access-Control-Allow-Origin', 'https://flower-farm-landing-3zygd12.public.builtwithrocker.new');
-res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-// Handle preflight requests
-if (req.method === 'OPTIONS') {
-  res.status(200).end();
-  return;
-}
-
 import Stripe from "stripe";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+// Dominios que SÍ pueden llamar a este endpoint
 const ALLOWED_ORIGINS = new Set([
-  "https://flowerfar8135.builtwithrocket.new",                         // si lo usas
+  "https://flower-farm-landing-3zryd12.public.builtwithrocket.new", // dominio público correcto
   "https://www.rocket.new",
   "https://rocket.new",
-  "https://flower-farm-landing-3zryd12.public.builtwithrocket.new",
   "http://localhost:3000",
 ]);
 
 export default async function handler(req, res) {
-  const origin = req.headers.origin || req.headers.get?.("origin") || "";
+  const origin = req.headers.origin || "";
 
-  // Si el origin NO está permitido, no devolvemos CORS para que el navegador lo bloquee
-  if (!origin || !ALLOWED_ORIGINS.has(origin)) {
+  // Si el origin no está en la lista, no exponemos CORS (el navegador lo bloqueará)
+  if (!ALLOWED_ORIGINS.has(origin)) {
     res.setHeader("Vary", "Origin");
     if (req.method === "OPTIONS") return res.status(204).end();
     return res.status(403).json({ error: "Origin not allowed", origin });
@@ -36,6 +25,7 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Vary", "Origin");
 
+  // Preflight OK
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
